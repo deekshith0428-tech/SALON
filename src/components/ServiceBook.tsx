@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Scissors, Palette, Sparkles, Flower2, User, Crown,
   ChevronLeft, ChevronRight, Clock, Tag,
@@ -15,28 +15,53 @@ export default function ServiceBook() {
   const [currentSpread, setCurrentSpread] = useState(0);
   const [flipping, setFlipping] = useState(false);
   const [flipDirection, setFlipDirection] = useState<'next' | 'prev'>('next');
+  const [isPaused, setIsPaused] = useState(false);
+  const turnTimeout = useRef<number | undefined>(undefined);
 
   // Each spread shows 2 categories (left page + right page)
   const totalSpreads = Math.ceil(SERVICE_CATEGORIES.length / 2);
 
-  const handleNext = () => {
-    if (flipping || currentSpread >= totalSpreads - 1) return;
-    setFlipDirection('next');
+  const turnToSpread = useCallback((spread: number, direction: 'next' | 'prev') => {
+    if (flipping || spread === currentSpread) return;
+
+    window.clearTimeout(turnTimeout.current);
+    setFlipDirection(direction);
     setFlipping(true);
-    setTimeout(() => {
-      setCurrentSpread((p) => p + 1);
+    turnTimeout.current = window.setTimeout(() => {
+      setCurrentSpread(spread);
       setFlipping(false);
+      turnTimeout.current = undefined;
     }, 600);
+  }, [currentSpread, flipping]);
+
+  useEffect(() => {
+    if (
+      !isVisible ||
+      isPaused ||
+      flipping ||
+      totalSpreads < 2 ||
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ) {
+      return;
+    }
+
+    const autoplayTimeout = window.setTimeout(() => {
+      turnToSpread((currentSpread + 1) % totalSpreads, 'next');
+    }, 5000);
+
+    return () => window.clearTimeout(autoplayTimeout);
+  }, [currentSpread, flipping, isPaused, isVisible, totalSpreads, turnToSpread]);
+
+  useEffect(() => () => window.clearTimeout(turnTimeout.current), []);
+
+  const handleNext = () => {
+    if (currentSpread >= totalSpreads - 1) return;
+    turnToSpread(currentSpread + 1, 'next');
   };
 
   const handlePrev = () => {
-    if (flipping || currentSpread <= 0) return;
-    setFlipDirection('prev');
-    setFlipping(true);
-    setTimeout(() => {
-      setCurrentSpread((p) => p - 1);
-      setFlipping(false);
-    }, 600);
+    if (currentSpread <= 0) return;
+    turnToSpread(currentSpread - 1, 'prev');
   };
 
   const handleBookNow = (categoryTitle: string, serviceName: string) => {
@@ -106,7 +131,7 @@ export default function ServiceBook() {
 
         {/* Services list */}
         <div className="flex-1 space-y-2 overflow-y-auto">
-          {category.services.map((service, i) => (
+          {category.services.map((service) => (
             <div
               key={service.name}
               className="flex items-center justify-between p-2.5 rounded-lg bg-white/60 border border-sand/20 hover:border-terracotta/30 hover:bg-white hover:shadow-sm transition-all duration-200 group cursor-pointer"
@@ -170,7 +195,14 @@ export default function ServiceBook() {
         </div>
 
         {/* The Book */}
-        <div ref={ref} className={`reveal ${isVisible ? 'is-visible' : ''}`}>
+        <div
+          ref={ref}
+          className={`reveal ${isVisible ? 'is-visible' : ''}`}
+          onMouseEnter={() => setIsPaused(true)}
+          onMouseLeave={() => setIsPaused(false)}
+          onFocus={() => setIsPaused(true)}
+          onBlur={() => setIsPaused(false)}
+        >
           <div className="book-spread mx-auto max-w-5xl">
             <div
               className={`book-3d relative ${
@@ -234,15 +266,7 @@ export default function ServiceBook() {
                 {Array.from({ length: totalSpreads }).map((_, i) => (
                   <button
                     key={i}
-                    onClick={() => {
-                      if (flipping) return;
-                      setFlipDirection(i > currentSpread ? 'next' : 'prev');
-                      setFlipping(true);
-                      setTimeout(() => {
-                        setCurrentSpread(i);
-                        setFlipping(false);
-                      }, 600);
-                    }}
+                    onClick={() => turnToSpread(i, i > currentSpread ? 'next' : 'prev')}
                     className={`h-2 rounded-full transition-all duration-300 ${
                       i === currentSpread
                         ? 'w-8 bg-terracotta'
@@ -274,13 +298,7 @@ export default function ServiceBook() {
                     key={cat.id}
                     onClick={() => {
                       const spreadIndex = Math.floor(i / 2);
-                      if (spreadIndex === currentSpread || flipping) return;
-                      setFlipDirection(spreadIndex > currentSpread ? 'next' : 'prev');
-                      setFlipping(true);
-                      setTimeout(() => {
-                        setCurrentSpread(spreadIndex);
-                        setFlipping(false);
-                      }, 600);
+                      turnToSpread(spreadIndex, spreadIndex > currentSpread ? 'next' : 'prev');
                     }}
                     className={`flex items-center gap-2 px-3 py-2 rounded-full text-xs font-medium transition-all duration-300 ${
                       isActive
