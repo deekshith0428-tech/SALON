@@ -1,0 +1,95 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: #F9F6F0;
+    color: #2C2A29;
+    font-family: 'Poppins', system-ui, sans-serif;
+    overflow-x: hidden;
+  }
+}
+
+@layer components {
+  .reveal {
+    opacity: 0;
+    transform: translateY(40px);
+    transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+  }
+
+  .reveal.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .text-gradient {
+    background: linear-gradient(135deg, #B85C38, #D1BB9E);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .book-spread {
+    perspective: 2000px;
+  }
+
+  .book-3d {
+    transform-style: preserve-3d;
+    transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .book-page-inner {
+    transform-style: preserve-3d;
+    transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    transform-origin: left center;
+  }
+
+  .reviews-marquee-track {
+    animation: reviews-marquee 45s linear infinite;
+  }
+
+  @keyframes reviews-marquee {
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reviews-marquee-track {
+      animation: none;
+    }
+
+    .reviews-marquee {
+      overflow-x: auto;
+    }
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F9F6F0;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #D1BB9E;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #B85C38;
+}
+
+/* Selection */
+::selection {
+  background: #B85C38;
+  color: #F9F6F0;
+}
